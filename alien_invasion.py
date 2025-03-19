@@ -27,14 +27,13 @@ class AlienInvasion:
     def run_game(self):
         """Initialize the main loop of the game"""
         while True:
-            # Search keyboard and mouse events
             self._check_events()
             self.ship.update()
-            self.bullets.update()
-            # Destroy the bullets that have dissapeared from the screen
-            self._update_bullets()          
+            self._update_bullets()
+            self._update_aliens()
             self._update_screen()
 
+    # ---- USER EVENTS ----
     def _check_events(self):
         """Keyboard pressing and mouse events"""
         for event in pygame.event.get():
@@ -63,6 +62,7 @@ class AlienInvasion:
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = False
 
+    # ---- BULLETS AND SHOTS ----
     def _fire_bullet(self):
         """Make a bullet and add it to the bullets group"""
         if len(self.bullets) < self.settings.bullets_allowed:
@@ -70,53 +70,69 @@ class AlienInvasion:
             self.bullets.add(new_bullet)
 
     def _update_bullets(self):
-        """Upodate the bullets position and get rid of the old ones"""
-        # Update the bullets position
+        """Update the bullets position and remove old bullets"""
         self.bullets.update()
-        #Get rid of the old ones
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
 
+    # ---- ENEMIES CREATIN AND MANAGEMENT ----
     def _create_fleet(self):
         """Make the Aliens Fleet"""
-        # Make an alien and find the number of aliens at a row
         alien = Alien(self)
         alien_width, alien_height = alien.rect.size
         available_space_x = self.settings.screen_width - (2 * alien_width)
         number_aliens_x = available_space_x // (2 * alien_width)
 
-        # Establish the number of alien rows on the screen
         ship_height = self.ship.rect.height
         available_space_y = (self.settings.screen_height - (3 * alien_height) - ship_height)
         number_rows = available_space_y // (2 * alien_height)
 
-        # Make thw whole fleet
         for row_number in range(number_rows):
             for alien_number in range(number_aliens_x):
                 self._create_alien(alien_number, row_number)
 
     def _create_alien(self, alien_number, row_number):
-        # Make an alien and put it in a row
-            alien = Alien(self)
-            alien_width, alien_height = alien.rect.size
-            alien.x = alien_width + 2 * alien_width * alien_number
-            alien.rect.x = alien.x
-            alien.rect.y = alien.rect.height + 2 * alien_height * row_number
-            self.aliens.add(alien)
+        """Make an alien and place it in a row"""
+        alien = Alien(self)
+        alien_width, alien_height = alien.rect.size
+        alien.x = alien_width + 2 * alien_width * alien_number
+        alien.rect.x = alien.x
+        alien.rect.y = alien.rect.height + 2 * alien_height * row_number
+        self.aliens.add(alien)
 
-    def _update_screen( self):
-        """Update the screen images and change to the new screen"""
+    def _check_fleet_edges(self):
+        """Responds if an alien has arrived at the edge"""
+        for alien in self.aliens.sprites():
+            if alien.check_edges():
+                self._change_fleet_direction()
+                break
+            
+    def _change_fleet_direction(self):
+        """The fleet moves down and changes direction"""
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.settings.fleet_drop_speed
+        self.settings.fleet_direction *= -1
+
+
+    def _update_aliens(self):
+        """Check if the fleet is at the edge; then update positions"""
+        self._check_fleet_edges()
+        self.aliens.update()
+
+    
+    # ---- RENDERING ----
+    def _update_screen(self):
+        """Update the screen images and switch to the new screen"""
         self.screen.fill(self.settings.bg_color)
         self.ship.blitme() 
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
         self.aliens.draw(self.screen)
 
-        # Make visible the last drawn screen
         pygame.display.flip()
 
+# ---- EXECUTION ----
 if __name__ == "__main__":
-    # Make an instance of the game and execute it
     ai = AlienInvasion()
     ai.run_game()
